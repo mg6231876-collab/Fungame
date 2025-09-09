@@ -1,0 +1,639 @@
+# Fungame
+It's create for gaming 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indian Army: Border Defense</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #2c5530, #1a3d1f);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 40%, #8FBC8F 100%);
+            overflow: hidden;
+        }
+
+        /* Game World */
+        #gameWorld {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(139, 69, 19, 0.3) 2px, transparent 2px),
+                radial-gradient(circle at 80% 70%, rgba(139, 69, 19, 0.3) 1px, transparent 1px);
+            background-size: 50px 50px, 30px 30px;
+        }
+
+        /* Mountains Background */
+        .mountains {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 40%;
+            background: linear-gradient(45deg, #4a5d23, #6b7c32, #4a5d23);
+            clip-path: polygon(0 100%, 15% 60%, 35% 80%, 50% 40%, 70% 70%, 85% 50%, 100% 75%, 100% 100%);
+            z-index: 1;
+        }
+
+        /* Player */
+        #player {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            transition: all 0.1s ease;
+        }
+
+        .soldier {
+            width: 100%;
+            height: 100%;
+            background: #2d5016;
+            border-radius: 50% 50% 20% 20%;
+            position: relative;
+            border: 2px solid #1a3009;
+        }
+
+        .soldier::before {
+            content: '🎖️';
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+        }
+
+        .soldier::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 8px;
+            background: #654321;
+            border-radius: 10px;
+        }
+
+        /* Enemies */
+        .enemy {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            background: #8B0000;
+            border-radius: 50% 50% 20% 20%;
+            border: 2px solid #4B0000;
+            z-index: 5;
+            transition: all 0.3s ease;
+        }
+
+        .enemy::before {
+            content: '💀';
+            position: absolute;
+            top: 3px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+        }
+
+        .enemy.hit {
+            animation: enemyHit 0.3s ease;
+        }
+
+        @keyframes enemyHit {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); background: #FF4500; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        /* Bullets */
+        .bullet {
+            position: absolute;
+            width: 4px;
+            height: 8px;
+            background: #FFD700;
+            border-radius: 2px;
+            z-index: 8;
+            box-shadow: 0 0 4px #FFA500;
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 15px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            color: white;
+            z-index: 20;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .health-bar, .ammo-bar {
+            width: 80px;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ff8888);
+            transition: width 0.3s ease;
+        }
+
+        .ammo-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4444ff, #8888ff);
+            transition: width 0.3s ease;
+        }
+
+        /* Mobile Controls */
+        #mobileControls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            z-index: 25;
+            pointer-events: none;
+        }
+
+        #joystick {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 100px;
+            height: 100px;
+            background: rgba(255,255,255,0.2);
+            border: 3px solid rgba(255,255,255,0.4);
+            border-radius: 50%;
+            pointer-events: all;
+        }
+
+        #joystickKnob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        #shootButton {
+            position: absolute;
+            bottom: 50px;
+            right: 30px;
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #ff4444, #cc2222);
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: all;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            transition: all 0.1s ease;
+        }
+
+        #shootButton:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+
+        #reloadButton {
+            position: absolute;
+            bottom: 50px;
+            right: 130px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #4444ff, #2222cc);
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            pointer-events: all;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            transition: all 0.1s ease;
+        }
+
+        #reloadButton:active {
+            transform: scale(0.95);
+        }
+
+        /* Mission Display */
+        #missionDisplay {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            z-index: 20;
+            border: 2px solid #FFD700;
+        }
+
+        /* Game Over Screen */
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+        }
+
+        #gameOverScreen h2 {
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: #FFD700;
+        }
+
+        #restartButton {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: all 0.2s ease;
+        }
+
+        #restartButton:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            #joystick {
+                width: 80px;
+                height: 80px;
+                bottom: 20px;
+                left: 20px;
+            }
+            
+            #joystickKnob {
+                width: 32px;
+                height: 32px;
+            }
+            
+            #shootButton {
+                width: 70px;
+                height: 70px;
+                right: 20px;
+                bottom: 40px;
+                font-size: 20px;
+            }
+            
+            #reloadButton {
+                width: 50px;
+                height: 50px;
+                right: 110px;
+                bottom: 40px;
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="gameWorld">
+            <div class="mountains"></div>
+            
+            <div id="player">
+                <div class="soldier"></div>
+            </div>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud">
+            <div class="hud-item">
+                <span>❤️</span>
+                <div class="health-bar">
+                    <div class="health-fill" id="healthFill"></div>
+                </div>
+                <span id="healthText">100</span>
+            </div>
+            
+            <div class="hud-item">
+                <span>🎯</span>
+                <span id="scoreText">Score: 0</span>
+            </div>
+            
+            <div class="hud-item">
+                <span>🔫</span>
+                <div class="ammo-bar">
+                    <div class="ammo-fill" id="ammoFill"></div>
+                </div>
+                <span id="ammoText">30/30</span>
+            </div>
+        </div>
+
+        <!-- Mission Display -->
+        <div id="missionDisplay">
+            🇮🇳 Mission: Defend the Border - Eliminate All Enemies
+        </div>
+
+        <!-- Mobile Controls -->
+        <div id="mobileControls">
+            <div id="joystick">
+                <div id="joystickKnob"></div>
+            </div>
+            <button id="shootButton">🔥</button>
+            <button id="reloadButton">🔄</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen">
+            <h2 id="gameOverTitle">Mission Complete!</h2>
+            <p id="gameOverMessage">Excellent work, soldier!</p>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <button id="restartButton">New Mission</button>
+        </div>
+    </div>
+
+    <script>
+        class IndianArmyGame {
+            constructor() {
+                this.gameContainer = document.getElementById('gameContainer');
+                this.gameWorld = document.getElementById('gameWorld');
+                this.player = document.getElementById('player');
+                
+                // Game state
+                this.playerHealth = 100;
+                this.playerAmmo = 30;
+                this.maxAmmo = 30;
+                this.score = 0;
+                this.enemies = [];
+                this.bullets = [];
+                this.isGameRunning = true;
+                
+                // Player position and movement
+                this.playerX = window.innerWidth / 2;
+                this.playerY = window.innerHeight / 2;
+                this.playerSpeed = 3;
+                
+                // Mobile controls
+                this.joystickActive = false;
+                this.joystickCenter = { x: 0, y: 0 };
+                this.moveDirection = { x: 0, y: 0 };
+                
+                this.initializeControls();
+                this.spawnEnemies();
+                this.gameLoop();
+                this.updateHUD();
+            }
+
+            initializeControls() {
+                const joystick = document.getElementById('joystick');
+                const joystickKnob = document.getElementById('joystickKnob');
+                const shootButton = document.getElementById('shootButton');
+                const reloadButton = document.getElementById('reloadButton');
+
+                // Joystick controls
+                joystick.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.joystickActive = true;
+                    const rect = joystick.getBoundingClientRect();
+                    this.joystickCenter = {
+                        x: rect.left + rect.width / 2,
+                        y: rect.top + rect.height / 2
+                    };
+                });
+
+                document.addEventListener('touchmove', (e) => {
+                    if (!this.joystickActive) return;
+                    e.preventDefault();
+                    
+                    const touch = e.touches[0];
+                    const deltaX = touch.clientX - this.joystickCenter.x;
+                    const deltaY = touch.clientY - this.joystickCenter.y;
+                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    const maxDistance = 30;
+                    
+                    if (distance <= maxDistance) {
+                        joystickKnob.style.transform = `translate(${deltaX - 20}px, ${deltaY - 20}px)`;
+                        this.moveDirection = {
+                            x: deltaX / maxDistance,
+                            y: deltaY / maxDistance
+                        };
+                    } else {
+                        const angle = Math.atan2(deltaY, deltaX);
+                        const limitedX = Math.cos(angle) * maxDistance;
+                        const limitedY = Math.sin(angle) * maxDistance;
+                        joystickKnob.style.transform = `translate(${limitedX - 20}px, ${limitedY - 20}px)`;
+                        this.moveDirection = {
+                            x: Math.cos(angle),
+                            y: Math.sin(angle)
+                        };
+                    }
+                });
+
+                document.addEventListener('touchend', () => {
+                    this.joystickActive = false;
+                    joystickKnob.style.transform = 'translate(-50%, -50%)';
+                    this.moveDirection = { x: 0, y: 0 };
+                });
+
+                // Shoot button
+                shootButton.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.shoot();
+                });
+
+                // Reload button
+                reloadButton.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.reload();
+                });
+
+                // Keyboard controls for desktop testing
+                document.addEventListener('keydown', (e) => {
+                    switch(e.key) {
+                        case ' ':
+                            e.preventDefault();
+                            this.shoot();
+                            break;
+                        case 'r':
+                        case 'R':
+                            this.reload();
+                            break;
+                    }
+                });
+
+                // Restart button
+                document.getElementById('restartButton').addEventListener('click', () => {
+                    this.restartGame();
+                });
+            }
+
+            spawnEnemies() {
+                const enemyCount = 8;
+                for (let i = 0; i < enemyCount; i++) {
+                    setTimeout(() => {
+                        this.createEnemy();
+                    }, i * 2000);
+                }
+            }
+
+            createEnemy() {
+                if (!this.isGameRunning) return;
+
+                const enemy = document.createElement('div');
+                enemy.className = 'enemy';
+                
+                // Spawn enemies from edges
+                const side = Math.floor(Math.random() * 4);
+                let x, y;
+                
+                switch(side) {
+                    case 0: // Top
+                        x = Math.random() * window.innerWidth;
+                        y = -50;
+                        break;
+                    case 1: // Right
+                        x = window.innerWidth + 50;
+                        y = Math.random() * window.innerHeight;
+                        break;
+                    case 2: // Bottom
+                        x = Math.random() * window.innerWidth;
+                        y = window.innerHeight + 50;
+                        break;
+                    case 3: // Left
+                        x = -50;
+                        y = Math.random() * window.innerHeight;
+                        break;
+                }
+                
+                enemy.style.left = x + 'px';
+                enemy.style.top = y + 'px';
+                
+                const enemyData = {
+                    element: enemy,
+                    x: x,
+                    y: y,
+                    health: 1,
+                    speed: 1 + Math.random() * 0.5
+                };
+                
+                this.enemies.push(enemyData);
+                this.gameWorld.appendChild(enemy);
+            }
+
+            shoot() {
+                if (!this.isGameRunning || this.playerAmmo <= 0) return;
+                
+                this.playerAmmo--;
+                
+                // Find nearest enemy for auto-aim
+                let nearestEnemy = null;
+                let nearestDistance = Infinity;
+                
+                this.enemies.forEach(enemy => {
+                    const distance = Math.sqrt(
+                        Math.pow(enemy.x - this.playerX, 2) + 
+                        Math.pow(enemy.y - this.playerY, 2)
+                    );
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearestEnemy = enemy;
+                    }
+                });
+                
+                if (nearestEnemy) {
+                    this.createBullet(nearestEnemy);
+                }
+                
+                this.updateHUD();
+            }
+
+            createBullet(target) {
+                const bullet = document.createElement('div');
+                bullet.className = 'bullet';
+                
+                const startX = this.playerX;
+                const startY = this.playerY;
+                
+                bullet.style.left = startX + 'px';
+                bullet.style.top = startY + 'px';
+                
+                const bulletData = {
+                    element: bullet,
+                    x: startX,
+                    y: startY,
+                    targetX: target.x,
+                    targetY: target.y,
+                    speed: 8
+                };
+                
+                // Calculate direction
+                const distance = Math.sqrt(
+                    Math.pow(target.x - startX, 2) + 
+                    Math.pow(target.y - startY, 2)
+                );
+                
+                bulletData.velocityX = (target.x - startX) / distance * bulletData.speed;
+                bulletData.velocityY = (target.y - startY) / distance * bulletData.speed;
+                
+                this.bullets.push(bulletData);
+                this.gameWorld.appendChild(bullet);
+            }
+
+            reload() {
+                if (this.playerAmmo < this.maxAmmo) {
+      
